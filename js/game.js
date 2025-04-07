@@ -13,16 +13,23 @@ class Game {
         this.gameSpeed = 1;
         this.scrollY = 0;
         this.maxScrollY = 0;
+        this.highestPlatformY = 0; // Track highest platform reached
         
         // Game constants
-        this.GRAVITY = 0.5;
-        this.JUMP_STRENGTH = -12;
-        this.PLATFORM_SPEED = 2;
+        this.GRAVITY = 0.15;
+        this.JUMP_STRENGTH = -7;
+        this.PLATFORM_SPEED = 1.5;
         this.SCROLL_THRESHOLD = 300;
         
-        // Initialize game elements
-        this.player = new Player(this.canvas.width / 2, this.canvas.height - 30);
+        // Generate level first to get platform positions
         this.generateLevel();
+        
+        // Initialize player on the first platform
+        const firstPlatform = this.platforms[0];
+        this.player = new Player(
+            firstPlatform.x + firstPlatform.width / 2, // Center of platform
+            firstPlatform.y - 30 // Above the platform
+        );
         
         // Set up event listeners
         this.setupEventListeners();
@@ -32,22 +39,41 @@ class Game {
     }
     
     setupEventListeners() {
+        // Game state buttons
         document.getElementById('startButton').addEventListener('click', () => this.startGame());
         document.getElementById('restartButton').addEventListener('click', () => this.restartGame());
         
-        // Keyboard controls
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') this.player.keys.left = true;
-            if (e.key === 'ArrowRight') this.player.keys.right = true;
-            if (e.key === ' ' && !this.player.jumping) {
-                this.player.velocityY = this.JUMP_STRENGTH;
-                this.player.jumping = true;
+        // Movement controls
+        window.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowLeft':
+                    this.player.keys.left = true;
+                    break;
+                case 'ArrowRight':
+                    this.player.keys.right = true;
+                    break;
+                case 'ArrowUp':
+                    if (!this.player.jumping) {
+                        this.player.velocityY = this.JUMP_STRENGTH;
+                        this.player.jumping = true;
+                    }
+                    this.player.keys.up = true;
+                    break;
             }
         });
         
-        document.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowLeft') this.player.keys.left = false;
-            if (e.key === 'ArrowRight') this.player.keys.right = false;
+        window.addEventListener('keyup', (e) => {
+            switch(e.key) {
+                case 'ArrowLeft':
+                    this.player.keys.left = false;
+                    break;
+                case 'ArrowRight':
+                    this.player.keys.right = false;
+                    break;
+                case 'ArrowUp':
+                    this.player.keys.up = false;
+                    break;
+            }
         });
     }
     
@@ -64,6 +90,7 @@ class Game {
         this.level = 1;
         this.scrollY = 0;
         this.maxScrollY = 0;
+        this.highestPlatformY = 0; // Reset highest platform
         this.platforms = [];
         this.stars = [];
         this.enemies = [];
@@ -78,12 +105,13 @@ class Game {
     generateLevel() {
         // Clear existing platforms
         this.platforms = [];
+        this.stars = [];
+        this.enemies = [];
         
-        // Generate platforms with varying heights and types
-        const platformTypes = ['normal', 'moving', 'disappearing', 'bouncy'];
-        let currentY = this.canvas.height - 50; // Start near the bottom
+        // Generate initial platforms
+        let currentY = this.canvas.height - 100;
         
-        // First platform is always normal and at the bottom
+        // First platform is always normal and centered
         this.platforms.push(new Platform(
             this.canvas.width / 2 - 100,
             currentY,
@@ -92,48 +120,83 @@ class Game {
             'normal'
         ));
         
-        // Generate remaining platforms
-        for (let i = 0; i < 15; i++) {
-            // Random height between 50 and 150 pixels above the previous platform
-            const heightDiff = 50 + Math.random() * 100;
-            currentY -= heightDiff;
-            
-            // Random platform type (weighted towards normal platforms)
-            const typeIndex = Math.random() < 0.6 ? 0 : Math.floor(Math.random() * platformTypes.length);
+        console.log('First Platform:', {
+            y: currentY,
+            height: this.canvas.height
+        });
+        
+        // Generate initial set of platforms with consistent spacing
+        for (let i = 0; i < 3; i++) {
+            currentY -= 50; // Consistent 50 pixel spacing for all platforms
+            this.generatePlatformRow(currentY);
+        }
+    }
+    
+    generatePlatformRow(y) {
+        const platformTypes = ['normal', 'moving', 'disappearing', 'bouncy'];
+        const lastPlatform = this.platforms[this.platforms.length - 1];
+        const lastX = lastPlatform ? lastPlatform.x + lastPlatform.width / 2 : this.canvas.width / 2;
+        
+        // Generate only 1 platform in a row
+        const platformCount = 1;
+        const spacing = this.canvas.width / (platformCount + 1);
+        
+        for (let i = 0; i < platformCount; i++) {
+            const typeIndex = Math.random() < 0.7 ? 0 : Math.floor(Math.random() * platformTypes.length);
             const type = platformTypes[typeIndex];
             
-            // Random x position, ensuring platform stays within canvas
-            const x = Math.random() * (this.canvas.width - 200);
+            // Calculate x position with some randomness
+            const baseX = spacing * (i + 1);
+            const randomOffset = (Math.random() - 0.5) * 100;
+            const x = Math.max(0, Math.min(this.canvas.width - 200, baseX + randomOffset));
+            
+            // Use smaller vertical spacing for the first platform
+            const isFirstPlatform = this.platforms.length === 0;
+            const verticalSpacing = isFirstPlatform ? 50 : 100; // 50 pixels for first platform, 100 for others
+            const newY = y - verticalSpacing;
+            
+            console.log('Platform Generation:', {
+                platformNumber: this.platforms.length + 1,
+                isFirstPlatform: isFirstPlatform,
+                verticalSpacing: verticalSpacing,
+                currentY: y,
+                newY: newY,
+                x: x,
+                type: type
+            });
             
             this.platforms.push(new Platform(
                 x,
-                currentY,
+                newY,
                 200,
                 20,
                 type
             ));
-        }
-        
-        // Generate stars
-        this.stars = [];
-        for (let i = 0; i < 10; i++) {
-            // Place stars near platforms
-            const platform = this.platforms[Math.floor(Math.random() * this.platforms.length)];
-            this.stars.push(new Star(
-                platform.x + Math.random() * platform.width,
-                platform.y - 30
-            ));
-        }
-        
-        // Generate enemies
-        this.enemies = [];
-        for (let i = 0; i < 5; i++) {
-            const platform = this.platforms[Math.floor(Math.random() * this.platforms.length)];
-            this.enemies.push(new Enemy(
-                platform.x + Math.random() * platform.width,
-                platform.y - 30,
-                ['basic', 'flying', 'bouncing'][Math.floor(Math.random() * 3)]
-            ));
+            
+            // Add stars with 30% chance per platform
+            if (Math.random() < 0.3) {
+                this.stars.push(new Star(
+                    x + Math.random() * 200,
+                    newY - 30
+                ));
+            }
+            
+            // Add enemies with 20% chance per platform
+            if (Math.random() < 0.2) {
+                this.enemies.push(new Enemy(
+                    x + Math.random() * 200,
+                    newY - 30,
+                    ['basic', 'flying', 'bouncing'][Math.floor(Math.random() * 3)]
+                ));
+            }
+
+            // Add powerups with 15% chance per platform
+            if (Math.random() < 0.15) {
+                this.powerups.push(new Powerup(
+                    x + Math.random() * 200,
+                    newY - 30
+                ));
+            }
         }
     }
     
@@ -143,8 +206,14 @@ class Game {
         // Update player
         this.player.update(this.platforms);
         
+        // Update platforms
+        this.platforms.forEach(platform => platform.update());
+        
+        // Update stars
+        this.stars.forEach(star => star.update());
+        
         // Update enemies
-        this.enemies.forEach(enemy => enemy.update());
+        this.enemies.forEach(enemy => enemy.update(this.platforms));
         
         // Update powerups
         this.powerups.forEach(powerup => powerup.update());
@@ -152,10 +221,19 @@ class Game {
         // Check collisions
         this.checkCollisions();
         
-        // Scroll view if player is high enough
-        if (this.player.y < this.SCROLL_THRESHOLD) {
-            this.scrollY = this.SCROLL_THRESHOLD - this.player.y;
-            this.maxScrollY = Math.max(this.maxScrollY, this.scrollY);
+        // Only scroll and generate platforms if player is not respawning
+        if (this.player.invincibleTimer <= 0) {
+            // Scroll view if player is high enough
+            if (this.player.y < this.SCROLL_THRESHOLD) {
+                this.scrollY = this.player.y - this.SCROLL_THRESHOLD;
+                this.maxScrollY = Math.min(this.maxScrollY, this.scrollY);
+                
+                // Update highest platform reached
+                this.highestPlatformY = Math.min(this.highestPlatformY, this.player.y);
+                
+                // Generate new platforms when player is high enough
+                this.generateNewPlatforms();
+            }
         }
         
         // Check if player fell off screen
@@ -164,37 +242,92 @@ class Game {
             if (this.lives <= 0) {
                 this.gameOver();
             } else {
-                this.player.reset();
+                // Find the highest platform above the player's highest reached position
+                const respawnPlatform = this.platforms
+                    .filter(p => p.y <= this.highestPlatformY)
+                    .sort((a, b) => a.y - b.y)[0];
+                
+                if (respawnPlatform) {
+                    // Respawn on the highest platform
+                    this.player.x = respawnPlatform.x + respawnPlatform.width / 2;
+                    this.player.y = respawnPlatform.y - 30;
+                } else {
+                    // Fallback to first platform if no higher platform found
+                    const firstPlatform = this.platforms[0];
+                    this.player.x = firstPlatform.x + firstPlatform.width / 2;
+                    this.player.y = firstPlatform.y - 30;
+                }
+                
+                this.player.velocityY = 0;
+                this.player.velocityX = 0;
+                this.player.jumping = false;
+                this.player.invincibleTimer = 180; // 3 seconds of invincibility
             }
         }
     }
     
+    generateNewPlatforms() {
+        // Don't generate or clean up anything if player is respawning
+        if (this.player.invincibleTimer > 0) {
+            return;
+        }
+
+        // Only generate new platforms if player is moving up
+        if (this.player.velocityY >= 0) {
+            return;
+        }
+
+        // Keep only platforms that are within view
+        const viewBottom = this.scrollY + this.canvas.height;
+        const viewTop = this.scrollY;
+        
+        // Generate new platforms if needed
+        const highestPlatform = Math.min(...this.platforms.map(p => p.y));
+        
+        // Only generate new platforms at the top when needed
+        if (highestPlatform > viewTop - 300) {
+            const newY = highestPlatform - 50; // Consistent 50 pixel spacing
+            this.generatePlatformRow(newY);
+            
+            console.log('Generated new platform at:', {
+                y: newY,
+                highestPlatform: highestPlatform,
+                viewTop: viewTop
+            });
+        }
+    }
+    
     checkCollisions() {
-        // Star collisions
-        this.stars.forEach((star, index) => {
-            if (!star.collected && this.player.checkCollision(star)) {
-                star.collect();
-                this.score += 10;
-                // Chance to spawn powerup
-                if (Math.random() < 0.2) {
-                    this.powerups.push(new Powerup(star.x, star.y));
-                }
-            }
-        });
-        
-        // Enemy collisions
+        // Check player-enemy collisions
         this.enemies.forEach(enemy => {
-            if (this.player.checkCollision(enemy)) {
-                this.lives--;
-                if (this.lives <= 0) {
+            if (this.player.checkCollision(enemy) && !this.player.invincible) {
+                console.log('Player hit by enemy:', {
+                    playerX: this.player.x,
+                    playerY: this.player.y,
+                    enemyX: enemy.x,
+                    enemyY: enemy.y,
+                    playerLives: this.player.lives
+                });
+                this.player.takeDamage();
+                if (this.player.lives <= 0) {
+                    console.log('Game Over - Player lives depleted');
                     this.gameOver();
-                } else {
-                    this.player.reset();
                 }
             }
         });
-        
-        // Powerup collisions
+
+        // Check player-star collisions
+        this.stars.forEach((star, index) => {
+            if (this.player.checkCollision(star)) {
+                this.score += 10;
+                this.stars.splice(index, 1);
+                if (this.sounds && this.sounds.collect) {
+                    this.sounds.collect.play();
+                }
+            }
+        });
+
+        // Check player-powerup collisions
         this.powerups.forEach((powerup, index) => {
             if (this.player.checkCollision(powerup)) {
                 powerup.apply(this.player);
@@ -205,33 +338,9 @@ class Game {
     
     draw() {
         // Clear canvas
-        this.ctx.fillStyle = 'black';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Draw background stars
-        this.drawBackground();
-        
-        // Draw platforms
-        this.platforms.forEach(platform => platform.draw(this.ctx, this.scrollY));
-        
-        // Draw stars
-        this.stars.forEach(star => star.draw(this.ctx, this.scrollY));
-        
-        // Draw enemies
-        this.enemies.forEach(enemy => enemy.draw(this.ctx, this.scrollY));
-        
-        // Draw powerups
-        this.powerups.forEach(powerup => powerup.draw(this.ctx, this.scrollY));
-        
-        // Draw player
-        this.player.draw(this.ctx, this.scrollY);
-        
-        // Draw HUD
-        this.drawHUD();
-    }
-    
-    drawBackground() {
-        // Draw space background with stars
+        // Draw background
         this.ctx.fillStyle = '#000033';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
@@ -243,19 +352,83 @@ class Game {
             const size = Math.random() * 2;
             this.ctx.fillRect(x, y, size, size);
         }
+        
+        // Draw platforms
+        this.platforms.forEach(platform => {
+            const drawY = platform.y - this.scrollY;
+            if (drawY > -50 && drawY < this.canvas.height + 50) {
+                platform.draw(this.ctx, this.scrollY);
+            }
+        });
+        
+        // Draw stars
+        this.stars.forEach(star => {
+            const drawY = star.y - this.scrollY;
+            if (drawY > -50 && drawY < this.canvas.height + 50) {
+                star.draw(this.ctx, this.scrollY);
+            }
+        });
+        
+        // Draw enemies
+        this.enemies.forEach(enemy => {
+            const drawY = enemy.y - this.scrollY;
+            if (drawY > -50 && drawY < this.canvas.height + 50) {
+                enemy.draw(this.ctx, this.scrollY);
+            }
+        });
+        
+        // Draw powerups
+        this.powerups.forEach(powerup => {
+            const drawY = powerup.y - this.scrollY;
+            if (drawY > -50 && drawY < this.canvas.height + 50) {
+                powerup.draw(this.ctx, this.scrollY);
+            }
+        });
+        
+        // Draw player
+        this.player.draw(this.ctx, this.scrollY);
+        
+        // Draw HUD
+        this.drawHUD();
     }
     
     drawHUD() {
-        // Draw score
-        this.ctx.fillStyle = 'white';
-        this.ctx.font = '20px "Press Start 2P"';
-        this.ctx.fillText(`Score: ${this.score}`, 20, 30);
+        const ctx = this.ctx;
+        const canvas = this.canvas;
         
-        // Draw lives
-        this.ctx.fillText(`Lives: ${this.lives}`, 20, 60);
+        // Draw score and lives
+        ctx.fillStyle = 'white';
+        ctx.font = '20px Arial';
+        ctx.fillText(`Score: ${this.score}`, 10, 30);
+        ctx.fillText(`Lives: ${this.player.lives}`, 10, 60);
         
-        // Draw level
-        this.ctx.fillText(`Level: ${this.level}`, 20, 90);
+        // Draw powerup timers
+        const powerupY = 90;
+        const powerupSpacing = 30;
+        
+        // Double Jump Timer
+        if (this.player.powerups.doubleJump) {
+            ctx.fillStyle = 'cyan';
+            ctx.fillText('Double Jump', 10, powerupY);
+            const timerWidth = (this.player.powerupTimers.doubleJump / 300) * 100;
+            ctx.fillRect(10, powerupY + 10, timerWidth, 10);
+        }
+        
+        // Speed Boost Timer
+        if (this.player.powerups.speedBoost) {
+            ctx.fillStyle = 'magenta';
+            ctx.fillText('Speed Boost', 10, powerupY + powerupSpacing);
+            const timerWidth = (this.player.powerupTimers.speedBoost / 300) * 100;
+            ctx.fillRect(10, powerupY + powerupSpacing + 10, timerWidth, 10);
+        }
+        
+        // Invincibility Timer
+        if (this.player.powerups.invincible) {
+            ctx.fillStyle = 'yellow';
+            ctx.fillText('Invincible', 10, powerupY + powerupSpacing * 2);
+            const timerWidth = (this.player.powerupTimers.invincible / 300) * 100;
+            ctx.fillRect(10, powerupY + powerupSpacing * 2 + 10, timerWidth, 10);
+        }
     }
     
     gameOver() {

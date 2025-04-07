@@ -12,7 +12,7 @@ class Powerup {
     }
     
     getRandomType() {
-        const types = ['doubleJump', 'speedBoost', 'invincible'];
+        const types = ['doubleJump', 'teleport', 'invincible'];
         return types[Math.floor(Math.random() * types.length)];
     }
     
@@ -37,8 +37,8 @@ class Powerup {
             case 'doubleJump':
                 this.drawDoubleJump(ctx);
                 break;
-            case 'speedBoost':
-                this.drawSpeedBoost(ctx);
+            case 'teleport':
+                this.drawTeleport(ctx);
                 break;
             case 'invincible':
                 this.drawInvincible(ctx);
@@ -57,30 +57,24 @@ class Powerup {
         ctx.fillStyle = '#00ffff';
         // Draw wings
         ctx.beginPath();
-        ctx.moveTo(-10, 0);
-        ctx.lineTo(-20, -10);
-        ctx.lineTo(-10, -20);
-        ctx.lineTo(0, -10);
-        ctx.moveTo(10, 0);
-        ctx.lineTo(20, -10);
-        ctx.lineTo(10, -20);
-        ctx.lineTo(0, -10);
-        ctx.fill();
-        // Draw center
-        ctx.beginPath();
-        ctx.arc(0, 0, 5, 0, Math.PI * 2);
+        ctx.arc(-8, 0, 5, 0, Math.PI * 2);
+        ctx.arc(8, 0, 5, 0, Math.PI * 2);
         ctx.fill();
     }
     
-    drawSpeedBoost(ctx) {
+    drawTeleport(ctx) {
         ctx.fillStyle = '#ff00ff';
-        // Draw lightning bolt
+        // Draw teleport symbol (spiral)
         ctx.beginPath();
-        ctx.moveTo(-8, -10);
-        ctx.lineTo(0, 10);
-        ctx.lineTo(8, -10);
-        ctx.lineTo(-8, -10);
-        ctx.fill();
+        ctx.moveTo(0, 0);
+        for (let i = 0; i < 5; i++) {
+            const angle = i * Math.PI / 2;
+            const radius = 8 - i * 1.5;
+            ctx.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
+        }
+        ctx.strokeStyle = '#ff00ff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
     }
     
     drawInvincible(ctx) {
@@ -104,7 +98,7 @@ class Powerup {
         switch (this.type) {
             case 'doubleJump':
                 return '#00ffff';
-            case 'speedBoost':
+            case 'teleport':
                 return '#ff00ff';
             case 'invincible':
                 return '#ffff00';
@@ -112,16 +106,28 @@ class Powerup {
     }
     
     apply(player) {
-        this.collected = true;
-        player.powerups[this.type] = true;
+        if (this.collected) return;
         
-        // Play powerup sound
-        const sound = new Audio('sounds/powerup.mp3');
+        this.collected = true;
+        
+        // Play collection sound
+        const sound = new Audio('sounds/collect.mp3');
         sound.play().catch(() => {}); // Ignore errors if sound fails to play
         
-        // Remove powerup after duration
-        setTimeout(() => {
-            player.powerups[this.type] = false;
-        }, this.duration * 1000 / 60);
+        // Apply powerup effect
+        switch (this.type) {
+            case 'doubleJump':
+                player.powerups.doubleJump = true;
+                player.powerupTimers.doubleJump = this.duration;
+                break;
+            case 'teleport':
+                player.powerups.teleport = true;
+                player.powerupTimers.teleport = this.duration;
+                break;
+            case 'invincible':
+                player.powerups.invincible = true;
+                player.powerupTimers.invincible = this.duration;
+                break;
+        }
     }
 } 

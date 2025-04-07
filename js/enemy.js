@@ -5,17 +5,18 @@ class Enemy {
         this.width = 30;
         this.height = 30;
         this.type = type; // basic, flying, bouncing
-        this.velocityX = type === 'basic' ? 2 : 0;
+        this.velocityX = type === 'basic' ? 0.8 : 0;
         this.velocityY = 0;
         this.direction = 1;
         this.animationFrame = 0;
         this.animationSpeed = 0.1;
-        this.bounceHeight = -10;
+        this.bounceHeight = -5;
         this.moveRange = 100;
         this.originalX = x;
     }
     
-    update() {
+    update(platforms) {
+        const canvas = document.getElementById('gameCanvas');
         this.animationFrame += this.animationSpeed;
         
         switch (this.type) {
@@ -30,17 +31,33 @@ class Enemy {
                 
             case 'flying':
                 // Fly in a sine wave pattern
-                this.x += 2;
-                this.y += Math.sin(this.animationFrame) * 2;
+                this.x += 1.5;
                 if (this.x > canvas.width) {
                     this.x = -this.width;
                 }
+                this.y += Math.sin(this.animationFrame) * 1.5;
                 break;
                 
             case 'bouncing':
                 // Bounce up and down
-                this.velocityY += 0.5;
+                this.velocityY += 0.2; // Reduced gravity
                 this.y += this.velocityY;
+                
+                // Check platform collisions
+                for (const platform of platforms) {
+                    if (this.x + this.width > platform.x &&
+                        this.x < platform.x + platform.width &&
+                        this.y + this.height > platform.y &&
+                        this.y < platform.y + platform.height) {
+                        
+                        if (this.velocityY > 0) { // Falling
+                            this.y = platform.y - this.height;
+                            this.velocityY = this.bounceHeight;
+                        }
+                    }
+                }
+                
+                // Canvas boundary check
                 if (this.y > canvas.height - this.height) {
                     this.y = canvas.height - this.height;
                     this.velocityY = this.bounceHeight;

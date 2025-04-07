@@ -62,28 +62,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(style);
     }
     
-    // Add keyboard controls for desktop
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft') game.player.keys.left = true;
-        if (e.key === 'ArrowRight') game.player.keys.right = true;
-        if (e.key === ' ' && !game.player.jumping) {
-            game.player.velocityY = game.JUMP_STRENGTH;
-            game.player.jumping = true;
-        }
-    });
-    
-    document.addEventListener('keyup', (e) => {
-        if (e.key === 'ArrowLeft') game.player.keys.left = false;
-        if (e.key === 'ArrowRight') game.player.keys.right = false;
-    });
-    
     // Add game instructions
     const instructions = document.createElement('div');
     instructions.className = 'game-instructions';
     instructions.innerHTML = `
         <h2>How to Play</h2>
         <p>← → : Move Left/Right</p>
-        <p>Space : Jump</p>
+        <p>↑ : Jump</p>
         <p>Collect stars to earn points!</p>
         <p>Avoid obstacles and enemies!</p>
         <p>Collect powerups for special abilities!</p>
