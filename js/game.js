@@ -73,29 +73,63 @@ class Game {
     }
     
     generateLevel() {
-        // Generate platforms
-        for (let i = 0; i < 10; i++) {
+        // Clear existing platforms
+        this.platforms = [];
+        
+        // Generate platforms with varying heights and types
+        const platformTypes = ['normal', 'moving', 'disappearing', 'bouncy'];
+        let currentY = this.canvas.height - 50; // Start near the bottom
+        
+        // First platform is always normal and at the bottom
+        this.platforms.push(new Platform(
+            this.canvas.width / 2 - 100,
+            currentY,
+            200,
+            20,
+            'normal'
+        ));
+        
+        // Generate remaining platforms
+        for (let i = 0; i < 15; i++) {
+            // Random height between 50 and 150 pixels above the previous platform
+            const heightDiff = 50 + Math.random() * 100;
+            currentY -= heightDiff;
+            
+            // Random platform type (weighted towards normal platforms)
+            const typeIndex = Math.random() < 0.6 ? 0 : Math.floor(Math.random() * platformTypes.length);
+            const type = platformTypes[typeIndex];
+            
+            // Random x position, ensuring platform stays within canvas
+            const x = Math.random() * (this.canvas.width - 200);
+            
             this.platforms.push(new Platform(
-                Math.random() * (this.canvas.width - 200),
-                i * 100 + 400,
+                x,
+                currentY,
                 200,
-                20
+                20,
+                type
             ));
         }
         
         // Generate stars
-        for (let i = 0; i < 5; i++) {
+        this.stars = [];
+        for (let i = 0; i < 10; i++) {
+            // Place stars near platforms
+            const platform = this.platforms[Math.floor(Math.random() * this.platforms.length)];
             this.stars.push(new Star(
-                Math.random() * (this.canvas.width - 20),
-                Math.random() * (this.canvas.height - 20)
+                platform.x + Math.random() * platform.width,
+                platform.y - 30
             ));
         }
         
         // Generate enemies
-        for (let i = 0; i < 3; i++) {
+        this.enemies = [];
+        for (let i = 0; i < 5; i++) {
+            const platform = this.platforms[Math.floor(Math.random() * this.platforms.length)];
             this.enemies.push(new Enemy(
-                Math.random() * (this.canvas.width - 30),
-                Math.random() * (this.canvas.height - 30)
+                platform.x + Math.random() * platform.width,
+                platform.y - 30,
+                ['basic', 'flying', 'bouncing'][Math.floor(Math.random() * 3)]
             ));
         }
     }
