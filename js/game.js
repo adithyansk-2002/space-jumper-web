@@ -26,6 +26,9 @@ class Game {
         
         // Set up event listeners
         this.setupEventListeners();
+        
+        // Initial draw
+        this.draw();
     }
     
     setupEventListeners() {

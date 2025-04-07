@@ -109,4 +109,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     `;
     document.head.appendChild(gameStyles);
+    
+    // Start the game when the start button is clicked
+    document.getElementById('startButton').addEventListener('click', () => {
+        game.startGame();
+    });
+    
+    // Restart the game when the restart button is clicked
+    document.getElementById('restartButton').addEventListener('click', () => {
+        game.restartGame();
+    });
 }); 
