@@ -2,7 +2,7 @@ class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.gameState = 'menu'; // menu, playing, gameOver
+        this.gameState = 'menu'; // menu, playing, gameOver, win
         this.score = 0;
         this.lives = 3;
         this.level = 1;
@@ -14,6 +14,8 @@ class Game {
         this.scrollY = 0;
         this.maxScrollY = 0;
         this.highestPlatformY = 0; // Track highest platform reached
+        this.playerName = '';
+        this.highscores = this.loadHighscores();
         
         // Game constants
         this.GRAVITY = 0.15;
@@ -26,10 +28,11 @@ class Game {
         
         // Initialize player on the first platform
         const firstPlatform = this.platforms[0];
-        this.player = new Player(
-            firstPlatform.x + firstPlatform.width / 2, // Center of platform
-            firstPlatform.y - 30 // Above the platform
-        );
+        this.player = new Player();
+        this.player.x = firstPlatform.x + firstPlatform.width / 2 - this.player.width / 2; // Center on platform
+        this.player.y = firstPlatform.y - this.player.height; // On top of platform
+        this.player.velocityY = 0; // Start with no vertical velocity
+        this.player.jumping = false; // Not jumping initially
         
         // Set up event listeners
         this.setupEventListeners();
@@ -75,9 +78,32 @@ class Game {
                     break;
             }
         });
+
+        // High scores button
+        document.getElementById('highscoresButton').addEventListener('click', () => {
+            this.showHighscores();
+        });
+
+        // Back to menu button
+        document.getElementById('backToMenuButton').addEventListener('click', () => {
+            this.showMenu();
+        });
+
+        // Main Menu button in game over screen
+        document.getElementById('mainMenuButton').addEventListener('click', () => {
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('menuScreen').classList.remove('hidden');
+            this.gameState = 'menu';
+        });
     }
     
     startGame() {
+        const nameInput = document.getElementById('playerName');
+        this.playerName = nameInput.value.trim() || 'Player';
+        
+        // Store player name in localStorage
+        localStorage.setItem('lastPlayerName', this.playerName);
+        
         this.gameState = 'playing';
         document.getElementById('menuScreen').classList.add('hidden');
         document.getElementById('gameScreen').classList.remove('hidden');
@@ -120,54 +146,44 @@ class Game {
             'normal'
         ));
         
-        console.log('First Platform:', {
-            y: currentY,
-            height: this.canvas.height
-        });
-        
         // Generate initial set of platforms with consistent spacing
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 2; i++) { // Reduced from 3 to 2
             currentY -= 50; // Consistent 50 pixel spacing for all platforms
             this.generatePlatformRow(currentY);
         }
     }
     
     generatePlatformRow(y) {
-        const platformTypes = ['normal', 'moving', 'disappearing', 'bouncy'];
+        const platformTypes = ['normal', 'moving', 'disappearing'];
         const lastPlatform = this.platforms[this.platforms.length - 1];
         const lastX = lastPlatform ? lastPlatform.x + lastPlatform.width / 2 : this.canvas.width / 2;
         
+        // Check how many platforms are at this y-level
+        const platformsAtThisLevel = this.platforms.filter(p => p.y === y).length;
+        if (platformsAtThisLevel >= 2) return; // Don't generate more than 2 platforms per y-level
+        
         // Generate only 1 platform in a row
         const platformCount = 1;
-        const spacing = this.canvas.width / (platformCount + 1);
         
         for (let i = 0; i < platformCount; i++) {
             const typeIndex = Math.random() < 0.7 ? 0 : Math.floor(Math.random() * platformTypes.length);
             const type = platformTypes[typeIndex];
             
-            // Calculate x position with some randomness
-            const baseX = spacing * (i + 1);
-            const randomOffset = (Math.random() - 0.5) * 100;
-            const x = Math.max(0, Math.min(this.canvas.width - 200, baseX + randomOffset));
+            // Calculate x position with more variation but within screen bounds
+            const minDistance = 500; // Increased from 200
+            const maxDistance = 600; // Increased from 400
+            const randomDistance = Math.random() * (maxDistance - minDistance) + minDistance;
+            const direction = Math.random() < 0.5 ? -1 : 1; // Random direction (left or right)
             
-            // Use smaller vertical spacing for the first platform
-            const isFirstPlatform = this.platforms.length === 0;
-            const verticalSpacing = isFirstPlatform ? 50 : 100; // 50 pixels for first platform, 100 for others
-            const newY = y - verticalSpacing;
-            
-            console.log('Platform Generation:', {
-                platformNumber: this.platforms.length + 1,
-                isFirstPlatform: isFirstPlatform,
-                verticalSpacing: verticalSpacing,
-                currentY: y,
-                newY: newY,
-                x: x,
-                type: type
-            });
+            // Calculate new x position ensuring it stays within canvas bounds
+            let x = lastX + (randomDistance * direction);
+            // Ensure platform stays within screen with margin
+            const margin = 150; // Margin from screen edges
+            x = Math.max(margin, Math.min(this.canvas.width - margin - 200, x));
             
             this.platforms.push(new Platform(
                 x,
-                newY,
+                y,
                 200,
                 20,
                 type
@@ -177,7 +193,7 @@ class Game {
             if (Math.random() < 0.3) {
                 this.stars.push(new Star(
                     x + Math.random() * 200,
-                    newY - 30
+                    y - 30
                 ));
             }
             
@@ -185,7 +201,7 @@ class Game {
             if (Math.random() < 0.2) {
                 this.enemies.push(new Enemy(
                     x + Math.random() * 200,
-                    newY - 30,
+                    y - 30,
                     ['basic', 'flying', 'bouncing'][Math.floor(Math.random() * 3)]
                 ));
             }
@@ -194,7 +210,7 @@ class Game {
             if (Math.random() < 0.15) {
                 this.powerups.push(new Powerup(
                     x + Math.random() * 200,
-                    newY - 30
+                    y - 30
                 ));
             }
         }
@@ -272,28 +288,23 @@ class Game {
             return;
         }
 
-        // Only generate new platforms if player is moving up
-        if (this.player.velocityY >= 0) {
-            return;
-        }
-
-        // Keep only platforms that are within view
+        // Keep only platforms that are within view and visible
         const viewBottom = this.scrollY + this.canvas.height;
         const viewTop = this.scrollY;
+        
+        // Filter out platforms that are too far below or have disappeared
+        this.platforms = this.platforms.filter(platform => {
+            const isInView = platform.y > viewTop - 100 && platform.y < viewBottom + 100;
+            return platform.visible && isInView;
+        });
         
         // Generate new platforms if needed
         const highestPlatform = Math.min(...this.platforms.map(p => p.y));
         
-        // Only generate new platforms at the top when needed
-        if (highestPlatform > viewTop - 300) {
+        // Generate new platforms when player is near the top platform
+        if (this.player.y < highestPlatform + 200) {
             const newY = highestPlatform - 50; // Consistent 50 pixel spacing
             this.generatePlatformRow(newY);
-            
-            console.log('Generated new platform at:', {
-                y: newY,
-                highestPlatform: highestPlatform,
-                viewTop: viewTop
-            });
         }
     }
     
@@ -301,16 +312,8 @@ class Game {
         // Check player-enemy collisions
         this.enemies.forEach(enemy => {
             if (this.player.checkCollision(enemy) && !this.player.invincible) {
-                console.log('Player hit by enemy:', {
-                    playerX: this.player.x,
-                    playerY: this.player.y,
-                    enemyX: enemy.x,
-                    enemyY: enemy.y,
-                    playerLives: this.player.lives
-                });
                 this.player.takeDamage();
                 if (this.player.lives <= 0) {
-                    console.log('Game Over - Player lives depleted');
                     this.gameOver();
                 }
             }
@@ -431,11 +434,66 @@ class Game {
         }
     }
     
+    showHighscores() {
+        document.getElementById('menuScreen').classList.add('hidden');
+        document.getElementById('highscoresScreen').classList.remove('hidden');
+        this.displayHighscores();
+    }
+
+    showMenu() {
+        document.getElementById('highscoresScreen').classList.add('hidden');
+        document.getElementById('menuScreen').classList.remove('hidden');
+        
+        // Load last used player name
+        const lastPlayerName = localStorage.getItem('lastPlayerName');
+        if (lastPlayerName) {
+            document.getElementById('playerName').value = lastPlayerName;
+        }
+    }
+
+    loadHighscores() {
+        const highscores = localStorage.getItem('highscores');
+        return highscores ? JSON.parse(highscores) : [];
+    }
+
+    saveHighscore() {
+        if (this.score > 0) {
+            this.highscores.push({
+                name: this.playerName,
+                score: this.score,
+                date: new Date().toISOString()
+            });
+            
+            // Sort by score (descending) and keep top 10
+            this.highscores.sort((a, b) => b.score - a.score);
+            this.highscores = this.highscores.slice(0, 10);
+            
+            localStorage.setItem('highscores', JSON.stringify(this.highscores));
+        }
+    }
+
+    displayHighscores() {
+        const highscoresList = document.getElementById('highscoresList');
+        highscoresList.innerHTML = '';
+        
+        this.highscores.forEach((entry, index) => {
+            const div = document.createElement('div');
+            div.className = 'highscore-entry';
+            div.innerHTML = `
+                <span class="rank">${index + 1}.</span>
+                <span class="name">${entry.name}</span>
+                <span class="score">${entry.score}</span>
+            `;
+            highscoresList.appendChild(div);
+        });
+    }
+
     gameOver() {
+        this.saveHighscore();
         this.gameState = 'gameOver';
         document.getElementById('gameScreen').classList.add('hidden');
         document.getElementById('gameOverScreen').classList.remove('hidden');
-        document.getElementById('finalScore').textContent = `Score: ${this.score}`;
+        document.getElementById('finalScore').textContent = `Final Score: ${this.score}`;
     }
     
     gameLoop() {

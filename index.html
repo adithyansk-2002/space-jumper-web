@@ -9,7 +9,11 @@
     <div id="gameContainer">
         <div id="menuScreen" class="screen">
             <h1>Space Jumper</h1>
+            <div class="input-group">
+                <input type="text" id="playerName" placeholder="Enter your name" maxlength="10">
+            </div>
             <button id="startButton">Start Game</button>
+            <button id="highscoresButton">High Scores</button>
             <div class="instructions">
                 <h2>How to Play</h2>
                 <p>← → : Move Left/Right</p>
@@ -23,8 +27,14 @@
         </div>
         <div id="gameOverScreen" class="screen hidden">
             <h1>Game Over</h1>
-            <p id="finalScore">Score: 0</p>
+            <p id="finalScore">Final Score: 0</p>
             <button id="restartButton">Play Again</button>
+            <button id="mainMenuButton">Main Menu</button>
+        </div>
+        <div id="highscoresScreen" class="screen hidden">
+            <h1>High Scores</h1>
+            <div id="highscoresList"></div>
+            <button id="backToMenuButton">Back to Menu</button>
         </div>
     </div>
     <script src="js/game.js"></script>

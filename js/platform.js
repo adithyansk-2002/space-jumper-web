@@ -10,6 +10,8 @@ class Platform {
         this.movementSpeed = 1;
         this.movementDirection = 1;
         this.disappearTimer = 0;
+        this.blinkTimer = 0;
+        this.visible = true;
         this.bounceStrength = -15;
     }
     
@@ -26,8 +28,10 @@ class Platform {
             case 'disappearing':
                 if (this.disappearTimer > 0) {
                     this.disappearTimer--;
+                    this.blinkTimer = (this.blinkTimer + 1) % 10; // Blink every 10 frames
+                    
                     if (this.disappearTimer === 0) {
-                        this.height = 0;
+                        this.visible = false;
                     }
                 }
                 break;
@@ -35,7 +39,7 @@ class Platform {
     }
     
     draw(ctx, scrollY) {
-        if (this.height === 0) return;
+        if (!this.visible) return;
         
         ctx.save();
         
@@ -49,7 +53,12 @@ class Platform {
             case 'disappearing':
                 ctx.fillStyle = '#ffcc00';
                 if (this.disappearTimer > 0) {
-                    ctx.globalAlpha = 0.5 + (this.disappearTimer / 60) * 0.5;
+                    // Blink effect
+                    if (this.blinkTimer < 5) {
+                        ctx.globalAlpha = 0.5;
+                    } else {
+                        ctx.globalAlpha = 1;
+                    }
                 }
                 break;
             case 'bouncy':
@@ -70,8 +79,8 @@ class Platform {
     }
     
     trigger() {
-        if (this.type === 'disappearing') {
-            this.disappearTimer = 60; // 1 second before disappearing
+        if (this.type === 'disappearing' && this.visible) {
+            this.disappearTimer = 180; // 3 seconds at 60fps
         }
     }
     

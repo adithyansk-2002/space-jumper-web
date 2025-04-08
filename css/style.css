@@ -33,8 +33,9 @@ body {
     background: rgba(0, 0, 0, 0.8);
     border: 4px solid #4a4a4a;
     border-radius: 10px;
-    padding: 20px;
+    padding: 30px;
     z-index: 1;
+    box-sizing: border-box;
 }
 
 .hidden {
@@ -43,21 +44,26 @@ body {
 
 h1 {
     font-size: 2.5em;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     color: #00ff00;
     text-shadow: 0 0 10px #00ff00;
+    text-align: center;
+    width: 100%;
 }
 
 button {
     background: #4a4a4a;
     color: #fff;
     border: none;
-    padding: 15px 30px;
+    padding: 12px 20px;
     font-family: 'Press Start 2P', cursive;
-    font-size: 1em;
-    margin: 20px;
+    font-size: 14px;
+    margin: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
+    width: 100%;
+    max-width: 300px;
+    box-sizing: border-box;
 }
 
 button:hover {
@@ -66,21 +72,49 @@ button:hover {
     transform: scale(1.1);
 }
 
-.instructions {
-    margin-top: 30px;
+.input-group {
+    margin: 15px 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    max-width: 300px;
+}
+
+.input-group input {
+    padding: 12px;
+    font-size: 14px;
+    border: 2px solid #4a4a4a;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
     text-align: center;
-    line-height: 2;
+    width: 100%;
+    font-family: 'Press Start 2P', cursive;
+    box-sizing: border-box;
+}
+
+.instructions {
+    margin-top: 20px;
+    text-align: center;
+    line-height: 1.8;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 15px;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 400px;
+    box-sizing: border-box;
 }
 
 .instructions h2 {
-    font-size: 1.2em;
-    margin-bottom: 20px;
+    font-size: 1em;
+    margin-bottom: 15px;
     color: #00ff00;
 }
 
 .instructions p {
-    font-size: 0.8em;
+    font-size: 0.7em;
     color: #ccc;
+    margin: 4px 0;
 }
 
 canvas {
@@ -95,4 +129,48 @@ canvas {
     background: transparent;
     border: none;
     padding: 0;
+}
+
+#highscoresScreen {
+    background: rgba(0, 0, 0, 0.9);
+}
+
+#highscoresList {
+    margin: 15px 0;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    width: 100%;
+    max-width: 400px;
+    box-sizing: border-box;
+}
+
+.highscore-entry {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px;
+    margin: 4px 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    font-size: 0.7em;
+    box-sizing: border-box;
+}
+
+.highscore-entry .rank {
+    color: #00ff00;
+    margin-right: 10px;
+}
+
+.highscore-entry .name {
+    color: #fff;
+    flex-grow: 1;
+    text-align: left;
+    margin: 0 10px;
+}
+
+.highscore-entry .score {
+    color: #ffcc00;
+    font-weight: bold;
 } 

@@ -1,7 +1,8 @@
 class Player {
     constructor() {
-        this.x = 0;
-        this.y = 0;
+        const canvas = document.getElementById('gameCanvas');
+        this.x = canvas.width / 2; // Start in the center
+        this.y = canvas.height - 30; // Start near the bottom
         this.width = 30;
         this.height = 30;
         this.velocityX = 0;
@@ -165,6 +166,11 @@ class Player {
                     // Track that player is on this platform
                     onPlatform = true;
                     currentPlatform = platform;
+                    
+                    // Trigger disappearing platform
+                    if (platform.type === 'disappearing') {
+                        platform.trigger();
+                    }
                     
                     // If it's a moving platform and player isn't jumping, move with it
                     if (platform.type === 'moving' && !this.jumping) {
@@ -336,31 +342,16 @@ class Player {
     }
     
     takeDamage() {
-        console.log('Player taking damage:', {
-            currentLives: this.lives,
-            invincible: this.powerups.invincible,
-            invincibleTimer: this.invincibleTimer
-        });
+        if (this.invincibleTimer > 0) return;
         
-        // Check both invincible flag and timer
-        if (!this.powerups.invincible && this.invincibleTimer <= 0) {
-            this.lives--;
-            this.powerups.invincible = true;
-            this.invincibleTimer = 180; // 3 seconds of invincibility
-            
-            // Only play sound if it exists and is loaded
-            if (this.sounds && this.sounds.hit) {
-                try {
-                    this.sounds.hit.play().catch(e => console.log('Sound play error:', e));
-                } catch (e) {
-                    console.log('Sound error:', e);
-                }
-            }
-            
-            console.log('Damage applied:', {
-                newLives: this.lives,
-                newInvincibleTimer: this.invincibleTimer
-            });
+        this.lives--;
+        this.invincibleTimer = 180; // 3 seconds of invincibility
+        
+        // Play hit sound
+        if (this.sounds && this.sounds.hit) {
+            try {
+                this.sounds.hit.play().catch(e => {});
+            } catch (e) {}
         }
     }
     
@@ -379,10 +370,8 @@ class Player {
             // Play jump sound
             if (this.sounds && this.sounds.jump) {
                 try {
-                    this.sounds.jump.play().catch(e => console.log('Sound play error:', e));
-                } catch (e) {
-                    console.log('Sound error:', e);
-                }
+                    this.sounds.jump.play().catch(e => {});
+                } catch (e) {}
             }
         }
     }
